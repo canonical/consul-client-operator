@@ -15,7 +15,7 @@ import logging
 from pathlib import Path
 
 import charms.operator_libs_linux.v2.snap as snap
-from charms.consul_k8s.v0.consul_cluster import ConsulConfigRequirer
+from charms.consul_k8s.v0.consul_cluster import ConsulEndpointsRequirer
 from ops import main
 from ops.charm import CharmBase
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
@@ -35,7 +35,7 @@ class ConsulCharm(CharmBase):
         super().__init__(*args)
 
         self.ports: Ports = self.get_consul_ports()
-        self.consul = ConsulConfigRequirer(charm=self)
+        self.consul = ConsulEndpointsRequirer(charm=self)
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.start, self._on_start)
@@ -44,7 +44,7 @@ class ConsulCharm(CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(
-            self.consul.on.config_changed, self._on_consul_cluster_config_changed
+            self.consul.on.endpoints_changed, self._on_consul_cluster_endpoints_changed
         )
 
     def get_consul_ports(self) -> Ports:
@@ -94,7 +94,7 @@ class ConsulCharm(CharmBase):
         self._ensure_snap_present()
         self._configure()
 
-    def _on_consul_cluster_config_changed(self, _):
+    def _on_consul_cluster_endpoints_changed(self, _):
         self._configure()
 
     def _update_status(self, status):
@@ -120,7 +120,7 @@ class ConsulCharm(CharmBase):
     def _wait_for_mandatory_relations(self) -> bool:
         """Return true if mandatory relations are not joined."""
         # consul-cluster relation
-        if not self.consul.datacenter and not self.consul.server_join_addresses:
+        if not self.consul.datacenter and not self.consul.external_gossip_endpoints:
             logger.debug("Waiting for consul-cluster relation to be ready")
             self._update_status(BlockedStatus("Integration consul-cluster missing"))
             return True
@@ -129,15 +129,15 @@ class ConsulCharm(CharmBase):
 
     def _update_consul_config(self) -> bool:
         """Update consul client config."""
-        if self.consul.datacenter and self.consul.server_join_addresses:
+        if self.consul.datacenter and self.consul.external_gossip_endpoints:
             constructed_consul_config = ConsulConfigBuilder(
                 self.bind_address,
                 self.consul.datacenter,
-                self.consul.server_join_addresses,
+                self.consul.external_gossip_endpoints,
                 self.ports,
             ).build()
         else:
-            logger.info("Waiting for consul server address from consul-cluster relation")
+            logger.debug("Waiting for consul server address from consul-cluster relation")
             self._update_status(BlockedStatus("Integration consul-cluster missing"))
             return False
 
@@ -149,7 +149,9 @@ class ConsulCharm(CharmBase):
         if _running_consul_config == constructed_consul_config:
             return False
 
-        self._write_configuration(self.consul_config, json.dumps(constructed_consul_config))
+        self._write_configuration(
+            self.consul_config, json.dumps(constructed_consul_config, indent=2)
+        )
         logger.info("Consul configuration file updated.")
         return True
 

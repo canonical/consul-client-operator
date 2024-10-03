@@ -68,7 +68,10 @@ def test_consul_cluster_relation(harness: Harness[ConsulCharm], snap, read_confi
         "consul-server",
         app_data={
             "datacenter": datacenter,
-            "server_join_addresses": json.dumps(join_server_addresses),
+            "internal_gossip_endpoints": json.dumps(None),
+            "external_gossip_endpoints": json.dumps(join_server_addresses),
+            "internal_http_endpoint": json.dumps(None),
+            "external_http_endpoint": json.dumps(None),
         },
     )
     harness.begin_with_initial_hooks()
@@ -86,7 +89,10 @@ def test_consul_config_changed(harness: Harness[ConsulCharm], snap, read_config,
         "consul-server",
         app_data={
             "datacenter": datacenter,
-            "server_join_addresses": json.dumps(join_server_addresses),
+            "internal_gossip_endpoints": json.dumps(None),
+            "external_gossip_endpoints": json.dumps(join_server_addresses),
+            "internal_http_endpoint": json.dumps(None),
+            "external_http_endpoint": json.dumps(None),
         },
     )
     harness.begin_with_initial_hooks()

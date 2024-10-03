@@ -4,43 +4,45 @@
 # This file configures Charmcraft.
 # See https://juju.is/docs/sdk/charmcraft-config for guidance.
 
-name: consul
 type: charm
+name: consul
 
-title: Consul machine charm
+title: Consul client operator
 summary: |
   Consul operator to run consul client on hosts or VMs.
 description: |
-  Charm based Consul operator to deploy and manage consul client.
-
-website: https://charmhub.io/consul
-source: https://github.com/canonical/consul-operator
-issues: https://github.com/canonical/consul-operator/issues
-
-
-bases:
-  - build-on:
-    - name: ubuntu
-      channel: "24.04"
-    run-on:
-    - name: ubuntu
-      channel: "24.04"
+  Charm based Consul operator to deploy and manage consul agents in client mode.
+  Integrate with consul-k8s to join consul cluster running on k8s.
 
 parts:
   charm:
     charm-binary-python-packages:
       - pydantic
 
+base: ubuntu@24.04
+platforms:
+  amd64:
+    build-on: amd64
+    build-for: amd64
+
 assumes:
   - juju >= 3.5
+
+extra-bindings:
+  # Consul clients bind to this space.
+  consul:
 
 requires:
   consul-cluster:
     interface: consul-cluster
 
-extra-bindings:
-  # Consul clients bind to this space.
-  consul:
+links:
+  issues:
+  - https://github.com/canonical/consul-operator/issues
+  source:
+  - https://github.com/canonical/consul-operator
+  website:
+  - https://charmhub.io/consul
 
 config:
   options:
