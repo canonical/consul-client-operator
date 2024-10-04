@@ -39,11 +39,11 @@ requires:
 
 links:
   issues:
-  - https://github.com/canonical/consul-operator/issues
+  - https://github.com/canonical/consul-client-operator/issues
   source:
-  - https://github.com/canonical/consul-operator
+  - https://github.com/canonical/consul-client-operator
   website:
-  - https://charmhub.io/consul
+  - https://charmhub.io/consul-client
 
 config:
   options:

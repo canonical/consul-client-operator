@@ -1,4 +1,4 @@
-# Consul Machine Operator
+# Consul Client Machine Operator
 
 This [Juju](https://juju.is) charmed operator deploys and manages [Consul](https://www.consul.io/) on a machine.
 The consul agent is run in client mode and connect to external consul servers to join the cluster.
@@ -6,7 +6,7 @@ The consul agent is run in client mode and connect to external consul servers to
 ## Usage
 
 ```sh
-juju deploy ./consul_amd64.charm consul-client
+juju deploy ./consul-client_amd64.charm consul-client
 juju integrate consul-client:consul-cluster <consul-server offer>
 ```
 

@@ -7,7 +7,7 @@ this operator.
 
 
 - Generally, before developing enhancements to this charm, you should consider [opening an issue
-  ](https://github.com/canonical/consul-operator/issues) explaining your use case.
+  ](https://github.com/canonical/consul-client-operator/issues) explaining your use case.
 - If you would like to chat with us about your use-cases or proposed implementation, you can reach
   us at [Canonical Matrix public channel](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)
   or [Discourse](https://discourse.charmhub.io/).
@@ -56,7 +56,7 @@ juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 # Deploy the charm
-juju deploy ./consul_amd64.charm
+juju deploy ./consul-client_amd64.charm
 ```
 
 ## Canonical Contributor Agreement
