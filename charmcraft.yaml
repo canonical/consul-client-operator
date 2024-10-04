@@ -5,14 +5,15 @@
 # See https://juju.is/docs/sdk/charmcraft-config for guidance.
 
 type: charm
-name: consul
+subordinate: true
+name: consul-client
 
 title: Consul client operator
 summary: |
-  Consul operator to run consul client on hosts or VMs.
+  Consul operator to run consul agent in client mode on hosts or VMs.
 description: |
   Charm based Consul operator to deploy and manage consul agents in client mode.
-  Integrate with consul-k8s to join consul cluster running on k8s.
+  Integrate with consul-k8s to join remote consul cluster.
 
 parts:
   charm:
@@ -25,9 +26,6 @@ platforms:
     build-on: amd64
     build-for: amd64
 
-assumes:
-  - juju >= 3.5
-
 extra-bindings:
   # Consul clients bind to this space.
   consul:
@@ -35,6 +33,9 @@ extra-bindings:
 requires:
   consul-cluster:
     interface: consul-cluster
+  general-info:
+    interface: juju-info
+    scope: container
 
 links:
   issues:
