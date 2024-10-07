@@ -10,8 +10,10 @@ on kubernetes. The charm receives consul server addresses via the relation
 to join the consul cluster.
 """
 
+import hashlib
 import json
 import logging
+import re
 from pathlib import Path
 
 import charms.operator_libs_linux.v2.snap as snap
@@ -26,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 CONSUL_SNAP_NAME = "consul-client"
 CONSUL_EXTRA_BINDING = "consul"
+SNAP_INSTANCE_KEY_REGEX_PATTERN = r"^[a-z0-9]{1,10}$"
 
 
 class ConsulCharm(CharmBase):
@@ -33,6 +36,13 @@ class ConsulCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        # Add instance key to snap name for parallel snap installs
+        # Hash of unit name is used as snap instance key
+        # Instance key cannot be more than 10 characters
+        snap_instance_key = hashlib.shake_256(self.model.unit.name.encode("utf-8")).hexdigest(5)
+        self.snap_name = f"{CONSUL_SNAP_NAME}_{snap_instance_key}"
+        logger.info(f"consul snap name is aliased as {self.snap_name}")
 
         self.ports: Ports = self.get_consul_ports()
         self.consul = ConsulEndpointsRequirer(charm=self)
@@ -70,21 +80,21 @@ class ConsulCharm(CharmBase):
         self._ensure_snap_present()
 
     def _on_start(self, _):
-        self.unit.status = MaintenanceStatus(f"Starting {CONSUL_SNAP_NAME} snap")
+        self.unit.status = MaintenanceStatus(f"Starting {self.snap_name} snap")
         self._configure()
 
     def _on_stop(self, _):
-        self.unit.status = MaintenanceStatus(f"Stopping {CONSUL_SNAP_NAME} snap")
+        self.unit.status = MaintenanceStatus(f"Stopping {self.snap_name} snap")
         self._configure()
 
     def _on_remove(self, _) -> None:
-        self.unit.status = MaintenanceStatus(f"Uninstalling {CONSUL_SNAP_NAME} snap")
+        self.unit.status = MaintenanceStatus(f"Uninstalling {self.snap_name} snap")
         try:
             self.snap.ensure(state=snap.SnapState.Absent)
-            logging.info("Supposed to uininstall snap")
+            logging.debug(f"Unininstalling snap {self.snap_name}")
         except snap.SnapError as e:
-            logger.info(f"Failed to uninstall {CONSUL_SNAP_NAME}: {str(e)}")
-            self._update_status(BlockedStatus(f"Failed to restart {CONSUL_SNAP_NAME}"))
+            logger.info(f"Failed to uninstall {self.snap_name}: {str(e)}")
+            self._update_status(BlockedStatus(f"Failed to remove {self.snap_name}"))
 
     def _on_upgrade(self, _):
         self._ensure_snap_present()
@@ -111,8 +121,8 @@ class ConsulCharm(CharmBase):
             try:
                 self.snap.restart(services=["consul"])
             except snap.SnapError as e:
-                logger.info(f"Failed to restart {CONSUL_SNAP_NAME}: {str(e)}")
-                self._update_status(BlockedStatus(f"Failed to restart {CONSUL_SNAP_NAME}"))
+                logger.info(f"Failed to restart {self.snap_name}: {str(e)}")
+                self._update_status(BlockedStatus(f"Failed to restart {self.snap_name}"))
                 return
 
         self._update_status(ActiveStatus())
@@ -166,8 +176,8 @@ class ConsulCharm(CharmBase):
             if not self.snap.present:
                 self.snap.ensure(snap.SnapState.Latest, channel=channel)
         except snap.SnapError as e:
-            logger.info(f"Exception occurred while installing snap {CONSUL_SNAP_NAME}: {str(e)}")
-            self._update_status(BlockedStatus(f"Failed to install snap {CONSUL_SNAP_NAME}"))
+            logger.info(f"Exception occurred while installing snap {self.snap_name}: {str(e)}")
+            self._update_status(BlockedStatus(f"Failed to install snap {self.snap_name}"))
             return False
 
         return True
@@ -187,12 +197,37 @@ class ConsulCharm(CharmBase):
     def snap(self):
         """Return the snap object for the Consul snap."""
         # This is handled in a property to avoid calls to snapd until they're necessary.
-        return snap.SnapCache()[CONSUL_SNAP_NAME]
+        _snap_cache = snap.SnapCache()
+
+        # Snap library does not support parallel installs
+        # https://github.com/canonical/operator-libs-linux/issues/134
+        # Workaround to use the snap library with parallel installs
+        try:
+            return _snap_cache[self.snap_name]
+        except snap.SnapNotFoundError as e:
+            # Check if the snap name is parallel install with instance key
+            name_key = self.snap_name.rsplit("_", 1)
+            if not (len(name_key) == 2 and re.match(SNAP_INSTANCE_KEY_REGEX_PATTERN, name_key[1])):
+                raise e
+
+            name = name_key[0]
+            info = _snap_cache._snap_client.get_snap_information(name)
+            _snap_cache._snap_map[self.snap_name] = snap.Snap(
+                name=self.snap_name,
+                state=snap.SnapState.Available,
+                channel=info["channel"],
+                revision=info["revision"],
+                confinement=info["confinement"],
+                apps=None,
+            )
+            # Setting snapd experimental parallel instances config to true
+            snap._system_set("experimental.parallel-instances", "true")
+            return _snap_cache._snap_map[self.snap_name]
 
     @property
     def consul_config(self) -> Path:
         """Return the consul config path."""
-        return Path(f"/var/snap/{CONSUL_SNAP_NAME}/common/consul/config/client.json")
+        return Path(f"/var/snap/{self.snap_name}/common/consul/config/client.json")
 
     @property
     def bind_address(self) -> str | None:
