@@ -36,13 +36,13 @@ tox -e fmt           # update your code according to linting rules
 tox -e lint          # code style
 tox -e static        # static checkers
 tox -e unit          # unit tests
-tox -e integration   # integration tests
+tox -e integration   # integration tests on Ubuntu 24.04 and 26.04
 tox                  # runs 'lint' and 'unit' environments
 ```
 
 ## Build charm
 
-Build the charm in this git repository using:
+Use Charmcraft 4.x to build the amd64 charms for Ubuntu 24.04 and 26.04.
 
 ```shell
 charmcraft pack
@@ -50,13 +50,16 @@ charmcraft pack
 
 ### Deploy
 
+The example uses the Ubuntu 24.04 artifact. For Ubuntu 26.04, use the artifact
+whose filename contains `ubuntu@26.04-amd64`.
+
 ```bash
 # Create a model
 juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 # Deploy the charm
-juju deploy ./consul-client_amd64.charm
+juju deploy ./consul-client_ubuntu@24.04-amd64.charm
 ```
 
 ## Canonical Contributor Agreement

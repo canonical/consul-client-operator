@@ -22,11 +22,9 @@ parts:
     build-snaps:
       - astral-uv
 
-base: ubuntu@24.04
 platforms:
-  amd64:
-    build-on: amd64
-    build-for: amd64
+  ubuntu@24.04:amd64:
+  ubuntu@26.04:amd64:
 
 extra-bindings:
   # Consul clients bind to this space.

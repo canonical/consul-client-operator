@@ -5,8 +5,10 @@ The consul agent is run in client mode and connect to external consul servers to
 
 ## Usage
 
+Select the charm artifact for Ubuntu 24.04 or 26.04. This example uses Ubuntu 24.04.
+
 ```sh
-juju deploy ./consul-client_amd64.charm consul-client
+juju deploy ./consul-client_ubuntu@24.04-amd64.charm consul-client
 juju integrate consul-client:consul-cluster <consul-server offer>
 ```
 
