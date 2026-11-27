@@ -15,4 +15,4 @@ jobs:
     with:
       provider: machine
       default-track: "1.19"
-      charmcraft-channel: "3.x/stable"
+      charmcraft-channel: "4.x/stable"
